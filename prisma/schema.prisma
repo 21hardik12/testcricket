@@ -1,0 +1,93 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Event {
+  id                    String       @id @default(uuid())
+  title                 String
+  description           String
+  categoryId            String
+  price                 Int
+  date                  DateTime
+  images                EventImage[]
+  stadiumId             String  
+  isAvailableForBooking Boolean    @default(false)
+  bookings              Booking[]  
+  stadium               Stadium      @relation(fields: [stadiumId], references: [id], onDelete: Cascade)
+  category              Category     @relation(fields: [categoryId], references: [id], onDelete: NoAction)
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+}
+
+model Category {
+  id        String  @id @default(uuid())
+  name      String
+  events    Event[]  
+}
+
+model EventImage {
+  id      String @id @default(uuid())
+  url     String
+  eventId String
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
+
+model Stadium {
+  id       String         @id @default(uuid())
+  location String
+  images   StadiumImage[]
+  events   Event[]
+  tickets  Ticket[]
+}
+
+model Ticket {
+  id        String   @id @default(uuid())
+  name      String
+  price     Int
+  stadiumId String
+  stadium   Stadium  @relation(fields: [stadiumId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt    
+  Booking   Booking? @relation(fields: [bookingId], references: [id], onDelete: NoAction)
+  bookingId String?
+}
+
+model StadiumImage {
+  id        String  @id @default(uuid())
+  url       String
+  stadiumId String
+  stadium   Stadium @relation(fields: [stadiumId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id        String    @id @default(uuid())
+  email     String    @unique
+  name      String
+  phone     String
+  address   String
+  role      String
+  bookings  Booking[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Booking {
+  id        String   @id @default(uuid())
+  pricePaid Int
+  userId    String
+  eventId   String
+  tickets    Ticket[]
+  status    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: NoAction)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
