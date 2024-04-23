@@ -25,8 +25,10 @@ export async function addEvent(prevState: unknown, formData: any) {
   
   const formObject = Object.fromEntries(formData.entries());  
   formObject.images = files;
+  console.log(formObject.date, " former date")
+
   formObject.date = new Date(formObject.date);
-  
+  console.log(formObject.date, "new date")
   const result = addSchema.safeParse(formObject);
   if (result.success === false) {
     return result.error.formErrors.fieldErrors;
@@ -88,6 +90,7 @@ export async function editEvent(id: string, prevState: unknown, formData: any) {
   const formObject = Object.fromEntries(formData.entries());
   formObject.images = files;
   formObject.date = new Date(formObject.date);
+
   const result = editSchema.safeParse(formObject);
   if (result.success === false) {
     return result.error.formErrors.fieldErrors;
@@ -97,31 +100,13 @@ export async function editEvent(id: string, prevState: unknown, formData: any) {
 
   try {
     const event = await db.event.findUnique({
-      where: { id},
+      where: { id },
       include: { images: true },
     });
 
     if (!event) {
-      notFound();      
+      notFound();
     }
-
-    const imagesToDelete = event.images.filter(
-      (existingImage) => !data.images?.some((newImage: File) => newImage.name === existingImage.url)
-    );
-
-    await Promise.all(
-      imagesToDelete.map(async (image) => {
-        await fs.unlink(`public${image.url}`);
-        await db.eventImage.delete({ where: { id: image.id } });
-      })
-    );
-
-    const imagePaths = data.images?.map(async (image: File) => {
-      const imagePath = `/eventImages/${crypto.randomUUID()}-${image.name}`;
-      await fs.writeFile(`public${imagePath}`, Buffer.from(await image.arrayBuffer()));
-      return imagePath;
-    });
-
     const startingPrice = await db.stadium.findUnique({
       where: { id: data.stadium },
       select: {
@@ -133,21 +118,47 @@ export async function editEvent(id: string, prevState: unknown, formData: any) {
       },
     });
 
-    const updatedEvent = await db.event.update({
-      where: { id: formObject.id },
-      data: {
-        title: data.title,
-        description: data.description,
-        categoryId: data.category,
-        stadiumId: data.stadium,
-        images: {
-          createMany: {
-            data: await Promise.all(imagePaths?.map(async (url) => ({ url: await url })) || []),
-          },
+    const updatedEventData: any = {
+      title: data.title,
+      description: data.description,
+      categoryId: data.category,
+      stadiumId: data.stadium,
+      price: startingPrice?.tickets[0]?.price ?? event.price,
+      date: data.date ?? event.date,
+    };
+
+    // Filter out any File objects with a size of 0
+    const validImages = (data.images ?? []).filter((image: File) => image.size > 0);
+
+    if (validImages.length > 0) {
+      // Delete existing images only if there are valid new images selected
+      await Promise.all(
+        event.images.map(async (image) => {
+          await fs.unlink(`public${image.url}`);
+          await db.eventImage.delete({ where: { id: image.id } });
+        })
+      );
+
+      const imagePaths = await Promise.all(
+        validImages.map(async (image: File) => {
+          const imagePath = `/eventImages/${crypto.randomUUID()}-${image.name}`;
+          await fs.writeFile(`public${imagePath}`, Buffer.from(await image.arrayBuffer()));
+          return imagePath;
+        })
+      );
+
+      updatedEventData.images = {
+        createMany: {
+          data: imagePaths.map((url) => ({ url })),
         },
-        price: startingPrice?.tickets[0]?.price ?? event.price,
-        date: data.date ?? event.date,
-      },
+      };
+    }
+
+    
+
+    const updatedEvent = await db.event.update({
+      where: { id },
+      data: updatedEventData,
     });
 
     console.log(updatedEvent);
@@ -157,6 +168,7 @@ export async function editEvent(id: string, prevState: unknown, formData: any) {
 
   redirect('/admin/events');
 }
+
 export async function toggleProductAvailability(id: string, isAvailableForBooking: boolean) {
   await db.event.update({
     where: {
