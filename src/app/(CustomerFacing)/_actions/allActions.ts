@@ -4,6 +4,32 @@ import db from "@/db/db";
 import fs from "fs/promises";
 import { number } from "zod";
 
+export const getTicket = async (id: string) => {
+  const ticket = await db.ticket.findUnique({
+    where: {
+      id,      
+    },
+    include: {
+      stadium: true,
+    }
+  }); 
+
+  return ticket;
+}
+
+export const getEventWithoutImages = async (id: string) => {
+  const event = await db.event.findUnique({
+    where: {
+      id,
+    },
+    include: {
+      stadium: true,
+    }
+  });
+  return event;
+
+}
+
 export const getSingleEvent = async (id: string) => {
   const event = await db.event.findUnique({
     where: {

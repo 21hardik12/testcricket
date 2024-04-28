@@ -44,8 +44,8 @@ export default function SeatGroup({
   };
 
   const numberOfSeats = searchParams.get("seats") || 1;
-  
-
+  const totalAmount = (selectedTicket?.price || 0) * Number(numberOfSeats);
+  console.log(totalAmount);
   return (
     <>
       <p className="font-bold text-lg">Available Seats</p>
@@ -77,7 +77,7 @@ export default function SeatGroup({
       <div>
         <p className="font-bold text-lg">
           Total: {formatCurrency(selectedTicket?.price || 0)} - {numberOfSeats} Seats:{" "}
-          {formatCurrency((selectedTicket?.price || 0) * Number(numberOfSeats))}
+          {formatCurrency(totalAmount)}
         </p>        
       </div>
       <Link href={`${pathName}/booking?${createQueryString("ticket", selectedTicket?.id ?? '')}`}><button className="flex justify-center w-full py-4 h-auto bg-red-500 rounded-sm text-white text-lg">Book Tickets</button></Link>
