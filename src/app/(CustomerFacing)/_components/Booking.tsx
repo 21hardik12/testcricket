@@ -39,7 +39,7 @@ export async function Booking({ stadium }: BookingProps) {
             <Image
               height={400}
               width={400}
-              src={stadium.images[0].url}
+              src={stadium?.images[0].url}
               alt=""
             ></Image>
           </CollapsibleContent>
